@@ -1,6 +1,7 @@
-;Scheduler pseudo-ish-code
+; context_switcher -------------------------------------------------------------
+;
+;-------------------------------------------------------------------------------
 
-; we either do this, or have some sort of temporary stack?
 TEMP_IRQ_LR EQU &9D4
 TEMP_R0 EQU &9D8
 TEMP_R1 EQU &9DC
@@ -11,14 +12,12 @@ CURRENT_PROCESS_ID EQU &9E8
 TOP_OF_QUEUE EQU &9EC
 BOTTOM_OF_QUEUE EQU &AF0
 
-; IRQ Timer == 0 -> contextSwitch
+; contextSwitch ----------------------------------------------------------------
+; Saves the state of the currently running process, including it's registers
+; r0-12, SP, LR & PC. Then loads up the state of the next process to be run,
+; and continues from where the process just switched into left off.
+;-------------------------------------------------------------------------------
 contextSwitch
-	
-	; Store all of the current process's registers to it's stack
-	; Store the SPSR_IRQ (which is the CPSR of usrmode) to the user stack
-	; We need to store this information to the SYSTEM stack, not the IRQ stack
-	; Assume we have a location in mem that holds the current PID stack addr
-
 	adrl sp, temp_stack
 
 	; store r0 temporarily
@@ -33,13 +32,16 @@ contextSwitch
 	pop {r1}
 	str r1, [r0]
 
+	; store the SPSR of the IRQ (this is the CPSR of User Mode / System Mode)
 	mrs r0, spsr
 	ldr r1, =TEMP_SYSTEM_CPSR
 	str r0, [r1]
 	
+	; store the LR of the IRQ (this is the PC of User Mode / System Mode)
 	ldr r0, =TEMP_IRQ_LR
 	str lr, [r1]
 	
+	; store the IRQ CPSR
 	mrs r0, cpsr
 	ldr r1, =TEMP_IRQ_CPSR
 	str r0, [r1]
@@ -47,16 +49,23 @@ contextSwitch
 	orr r0, r0, #0x1F ; system mode, disable irq; fiq; thumb
 	msr cpsr_c, r0 ; actually change to system mode
 
-	; Now in System Mode
+	; Now should be in System Mode
+
+	; push the System CPSR
 	ldr r0, =TEMP_SYSTEM_CPSR
 	ldr r1, [r0]
 	push {r1}
+
 	ldr r0, =TEMP_R0 ; restore r0.
 	ldr r0, [r0]
 	ldr r1, =TEMP_R1 ; restore r1
 	ldr r1, [r1] 
+
+	; push the all registers of process we are switching out of
 	push {r0-r12, lr}
-	ldr r0, =TEMP_IRQ_LR ; this is the PC of the User Mode process
+
+	; push the PC of the process we are switching out of
+	ldr r0, =TEMP_IRQ_LR ; this is the PC of the System / User Mode process
 	ldr r1, [r0]
 	push {r1}
 	bl storeSP ; Store the current process's SP.
@@ -75,14 +84,18 @@ contextSwitch
 	; Return to process
 	mov pc, lr ; probably the incorrect way to do this
 
+; storeSP ----------------------------------------------------------------------
 ; stores the SP to the current_PID's area in linked-list index
+;-------------------------------------------------------------------------------
 storeSP
 	ldr r0, =TOP_OF_QUEUE
 	ldr r0, [r0]
 	str sp, [r0, #4]
 	mov pc, lr
 
+; getPID_SP_Addr ---------------------------------------------------------------
 ; returns (in r0) the address of where the SP-value is stored
+;-------------------------------------------------------------------------------
 getPID_SP_Addr
 	; r0 contains the PID to search for
 	ldr r1, =BOTTOM_OF_QUEUE ; load in the PID of the bottom process
@@ -96,13 +109,15 @@ getPID_SP_Addr
 		teq r0, r1
 		bne loop
 	; need to put some error-handling in here (e.g. if r0 contains PID that
-	;does not exist).
+	; does not exist).
 	pid_found
 		ldr r0, [r1]
 		mov pc, lr
 
+; getNextPID -------------------------------------------------------------------
 ; gets the top PID of the queue, and moves it to the bottom. also, stores the
 ; PID to [CURRENT_PROCESS_ID]
+;-------------------------------------------------------------------------------
 getNextPID
 	;TODO
 
