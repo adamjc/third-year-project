@@ -121,6 +121,16 @@ getPID_SP_Addr
 getNextPID
 	;TODO
 
+; addNewProcess ----------------------------------------------------------------
+; Stores the first instruction of the new process to a new area in linked list
+; input:-
+; r0: the PID (process ID) of the new process
+; r1: the PC of the new process
+; Cref: void addNewProcess(uint32 PID, uint32 PC)
+;-------------------------------------------------------------------------------
+addNewProcess
+	
+
 
 	defs 100
 temp_stack	
