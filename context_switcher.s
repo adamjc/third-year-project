@@ -209,8 +209,8 @@ addNewProcess
 	sub r3, r3, #8
 	str r3, [r2]
 
-	; store the PCB address at relative #-4
-	str r0, [r3], #-4
+	; store the PCB address at relative #4
+	str r0, [r3], #4
 	; store the PID at relative #0
 	str r1, [r3]
 

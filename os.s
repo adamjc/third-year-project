@@ -31,6 +31,11 @@ main
 	orr r0, r0, #&10
 	msr cpsr_c, r0
 
+	; set the current process ID to be 1 ***WILL CHANGE THIS TO BE DYNAMIC***
+	ldr r0, =CURRENT_PROCESS_ID
+	mov r1, #1
+	str r1, [r0]
+
 	b main_add
 
 ; main_add ---------------------------------------------------------------------
