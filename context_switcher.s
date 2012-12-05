@@ -13,6 +13,7 @@ TOP_OF_QUEUE EQU &9EC
 BOTTOM_OF_QUEUE EQU &AF0
 
 PCB_PTR EQU &AF4
+PROCESS_ID_COUNTER &AF8
 
 ; contextSwitch ----------------------------------------------------------------
 ; Saves the state of the currently running process, including it's registers
@@ -147,26 +148,39 @@ initializeLinkedList
 ; addNewProcess ----------------------------------------------------------------
 ; Stores the first instruction of the new process to a new area in linked list.
 ;
+; registers used:
+;
 ; input:-
-; r0: the PID (process ID) of the new process
-; r1: the PC of the new process
+; r0: the PC of the new process
+;
+; general:-
+; r1: the PID of the process
+; r2: the address of BOTTOM_OF_QUEUE
+; r3: the value stored at the pointer retrieved from BOTTOM_OF_QUEUE
 ;
 ; Cref: void addNewProcess(uint32 PID, uint32 PC)
 ;-------------------------------------------------------------------------------
 addNewProcess
 
+	; get the PID, update, and store it back.
+	ldr r1, [PROCESS_ID_COUNTER]
+	ldr r2, [r1]
+	add r2, r2, #1
+	str r2, [r1]
+	mov r1, r2
+
 	; get the address of the bottom of the queue
-	ldr r3, =BOTTOM_OF_QUEUE
-	ldr r4, [r3]
+	ldr r2, =BOTTOM_OF_QUEUE
+	ldr r3, [r2]
 
 	; update the new bottom of the queue
-	sub r4, r4, #8
-	str r4, [r3]
+	sub r3, r3, #8
+	str r3, [r2]
 
 	; store the PC at relative #0
-	str r1, [r4], #-4
+	str r0, [r3], #-4
 	; store the PID at relative #-4
-	str r0, [r4]
+	str r1, [r3]
 
 	mov pc, lr
 
