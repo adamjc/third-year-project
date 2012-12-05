@@ -20,9 +20,9 @@ main
 
 	bl initializeLinkedList
 
-	adrl r0, main_add
+	adrl r0, pcb1
 	bl addNewProcess
-	adrl r0, main_sub
+	adrl r0, pcb2
 	bl addNewProcess
 
 	; switch to user mode
@@ -92,8 +92,5 @@ os_stack
 add_stack
 	defs 96
 sub_stack
-
-ll_space
-	defs 16
 
 include context_switcher.s

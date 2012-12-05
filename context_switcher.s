@@ -56,6 +56,15 @@ contextSwitch
 
 	; Now should be in System Mode
 
+	; get the current PID
+	ldr r0, =CURRENT_PROCESS_ID
+	ldr r0, [r0]
+
+	; find the process's pcb address
+	bl findPCBAddress
+
+	ldr r1, =PCB_PTR
+
 	; push the System CPSR
 	ldr r0, =TEMP_SYSTEM_CPSR
 	ldr r1, [r0]
@@ -88,6 +97,29 @@ contextSwitch
 
 	; Return to process
 	mov pc, lr ; probably the incorrect way to do this
+
+; findPCBAddress ---------------------------------------------------------------
+; Returns the pcb address of the PID specified.
+;
+; Registers Used:
+; Parameters:-
+; r0: Current process ID
+; Return:-
+; r0: PCB Address of the current process ID
+; General:-
+; r1: Used to index the linked list
+; r2: Used to store the PID of where r1 indexes
+;-------------------------------------------------------------------------------
+findPCBAddress
+	push {r2}
+	findPCBLoop
+		ldr r1, =BOTTOM_OF_QUEUE
+		ldr r2, [r1], #8
+		cmp r2, r0
+		bne findPCBLoop
+	ldr r0, [r1, #-4]
+	pop {r2}
+	mov pc, lr
 
 ; storeSP ----------------------------------------------------------------------
 ; stores the SP to the current_PID's area in linked-list index
@@ -151,7 +183,7 @@ initializeLinkedList
 ; registers used:
 ;
 ; input:-
-; r0: the PC of the new process
+; r0: the PCB address of the new process
 ;
 ; general:-
 ; r1: the PID of the process
@@ -177,9 +209,9 @@ addNewProcess
 	sub r3, r3, #8
 	str r3, [r2]
 
-	; store the PC at relative #0
+	; store the PCB address at relative #-4
 	str r0, [r3], #-4
-	; store the PID at relative #-4
+	; store the PID at relative #0
 	str r1, [r3]
 
 	mov pc, lr
@@ -212,7 +244,8 @@ PCB
 	pcb2
 	defs 72
 
-
+ll_space
+	defs 16
 
 	defs 96
 temp_stack	
