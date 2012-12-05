@@ -23,8 +23,6 @@ PROCESS_ID_COUNTER EQU &AF8
 contextSwitch
 	adrl sp, temp_stack
 
-	;TODO redo this using the PCB instead of a stack.
-
 	; store r0 temporarily
 	push {r1}
 	push {r0}
@@ -112,12 +110,12 @@ contextSwitch
 ;-------------------------------------------------------------------------------
 findPCBAddress
 	push {r2}
+	ldr r1, =BOTTOM_OF_QUEUE
 	findPCBLoop
-		ldr r1, =BOTTOM_OF_QUEUE
 		ldr r2, [r1], #8
 		cmp r2, r0
 		bne findPCBLoop
-	ldr r0, [r1, #-4]
+	ldr r0, [r1, #-12]
 	pop {r2}
 	mov pc, lr
 
