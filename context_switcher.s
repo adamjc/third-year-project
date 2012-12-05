@@ -12,6 +12,8 @@ CURRENT_PROCESS_ID EQU &9E8
 TOP_OF_QUEUE EQU &9EC
 BOTTOM_OF_QUEUE EQU &AF0
 
+PCB_PTR EQU &AF4
+
 ; contextSwitch ----------------------------------------------------------------
 ; Saves the state of the currently running process, including it's registers
 ; r0-12, SP, LR & PC. Then loads up the state of the next process to be run,
@@ -19,6 +21,8 @@ BOTTOM_OF_QUEUE EQU &AF0
 ;-------------------------------------------------------------------------------
 contextSwitch
 	adrl sp, temp_stack
+
+	;TODO redo this using the PCB instead of a stack.
 
 	; store r0 temporarily
 	push {r1}
@@ -95,6 +99,7 @@ storeSP
 
 ; getPID_SP_Addr ---------------------------------------------------------------
 ; returns (in r0) the address of where the SP-value is stored
+; TODO redo this to use the PCB instead of the stack.
 ;-------------------------------------------------------------------------------
 getPID_SP_Addr
 	; r0 contains the PID to search for
@@ -121,16 +126,80 @@ getPID_SP_Addr
 getNextPID
 	;TODO
 
+; initalizeLinkedList ----------------------------------------------------------
+; Sets the top and the bottom of the linked list queue to be at the address
+; defined by the hardcoded value in os.s. I.e. sets the size of the list to 
+; be 0.
+;
+; input:-  void
+; output:- void
+; creference:- void initializeLinkedList()
+;-------------------------------------------------------------------------------
+initializeLinkedList
+	ldr r0, TOP_OF_QUEUE
+	adrl r1, ll_space
+	str r1, [r0]
+	ldr r0, BOTTOM_OF_QUEUE
+	str r1, [r0]
+
+	mov pc, lr
+
 ; addNewProcess ----------------------------------------------------------------
-; Stores the first instruction of the new process to a new area in linked list
+; Stores the first instruction of the new process to a new area in linked list.
+;
 ; input:-
 ; r0: the PID (process ID) of the new process
 ; r1: the PC of the new process
+;
 ; Cref: void addNewProcess(uint32 PID, uint32 PC)
 ;-------------------------------------------------------------------------------
 addNewProcess
-	
+
+	; get the address of the bottom of the queue
+	ldr r3, =BOTTOM_OF_QUEUE
+	ldr r4, [r3]
+
+	; update the new bottom of the queue
+	sub r4, r4, #8
+	str r4, [r3]
+
+	; store the PC at relative #0
+	str r1, [r4], #-4
+	; store the PID at relative #-4
+	str r0, [r4]
+
+	mov pc, lr
+
+; updatePCB_PTR ----------------------------------------------------------------
+; Places the address of the PCB into PCB_PTR.
+;-------------------------------------------------------------------------------
+updatePCB_PTR
+	ldr r0, =PCB_PTR
+	adrl r1, PCB
+	str r1, [r0]
+	mov pc, lr
+
+; PCB --------------------------------------------------------------------------
+; Process Control Block
+;
+; Each process requires 72 bytes of storages (18 32-bit values)
+;
+; Outline of values in each process block:
+; #0     stores the PID
+; #4-#52 stores r0-r12
+; #56    stores the SP (r13)
+; #60    stores the LR (r14)
+; #64    stores the PC (r15)
+; #68    stores the CPSR
+;-------------------------------------------------------------------------------
+PCB
+	pcb1
+	defs 72
+	pcb2
+	defs 72
 
 
-	defs 100
+
+	defs 96
 temp_stack	
+

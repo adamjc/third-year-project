@@ -18,6 +18,8 @@ b	fiqRoutine		; fast interrupt request
 main
 	adrl sp, os_stack
 
+	bl initializeLinkedList
+
 	adrl r0, main_add
 	bl addNewProcess
 	adrl r0, main_sub
@@ -83,12 +85,15 @@ irqRoutine
 ;-
 fiqRoutine
 
-	defs 100
+	defs 96
 os_stack
 
-	defs 100
+	defs 96
 add_stack
-	defs 100
+	defs 96
 sub_stack
+
+ll_space
+	defs 16
 
 include context_switcher.s
