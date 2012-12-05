@@ -1,0 +1,20 @@
+KMD
+00000000:             ; ; writing values to a look-up table test program
+00000000:             ; 
+00000000:             ; main
+00000000: E28F0008    ;         adrl r0, test_table
+00000004: E28F1004    ;         adrl r1, pcb1
+00000008: E28F2010    ;         adrl r2, pcb2
+0000000C: EAFFFFFB    ;         b main
+00000010:             ; 
+00000010:             ; test_table
+00000010:             ;         pcb1
+00000010:             ;         defs 16
+00000020:             ;         pcb2
+00000020:             ;         defs 16
+
+Symbol Table: Labels
+: main                              00000000  Local -- ARM
+: test_table                        00000010  Local -- ARM
+: pcb1                              00000010  Local -- ARM
+: pcb2                              00000020  Local -- ARM

@@ -13,7 +13,7 @@ TOP_OF_QUEUE EQU &9EC
 BOTTOM_OF_QUEUE EQU &AF0
 
 PCB_PTR EQU &AF4
-PROCESS_ID_COUNTER &AF8
+PROCESS_ID_COUNTER EQU &AF8
 
 ; contextSwitch ----------------------------------------------------------------
 ; Saves the state of the currently running process, including it's registers
@@ -137,10 +137,10 @@ getNextPID
 ; creference:- void initializeLinkedList()
 ;-------------------------------------------------------------------------------
 initializeLinkedList
-	ldr r0, TOP_OF_QUEUE
+	ldr r0, =TOP_OF_QUEUE
 	adrl r1, ll_space
 	str r1, [r0]
-	ldr r0, BOTTOM_OF_QUEUE
+	ldr r0, =BOTTOM_OF_QUEUE
 	str r1, [r0]
 
 	mov pc, lr
@@ -163,7 +163,7 @@ initializeLinkedList
 addNewProcess
 
 	; get the PID, update, and store it back.
-	ldr r1, [PROCESS_ID_COUNTER]
+	ldr r1, =PROCESS_ID_COUNTER
 	ldr r2, [r1]
 	add r2, r2, #1
 	str r2, [r1]

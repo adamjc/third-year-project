@@ -2,9 +2,12 @@
 
 main
 	adrl r0, test_table
+	adrl r1, pcb1
+	adrl r2, pcb2
 	b main
 
-test_table	DEFW	0
-			DEFW	1
-			DEFW	2
-			DEFW	3
+test_table
+	pcb1
+	defs 16
+	pcb2
+	defs 16

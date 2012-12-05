@@ -3,14 +3,14 @@
 ;
 
 ; Exception Vectors ------------------------------------------------------------
-b	main			; reset
-b	undef			; undefined instruction
-b	supervisorCall	; svc
-b	prefetchAbort	; tried to execute code from non-existing memory regions
-b	dataAbort		; data error (e.g. accessed out of bounds area)
+b	main					; reset
+b	undefinedInstruction	; undefined instruction
+b	supervisorCall			; svc
+b	prefetchAbort			; tried to execute code from non-existing memory regions
+b	dataAbort				; data error (e.g. accessed out of bounds area)
 nop
-b	irqRoutine		; interrupt request
-b	fiqRoutine		; fast interrupt request
+b	irqRoutine				; interrupt request
+b	fiqRoutine				; fast interrupt request
 
 ; main -
 ;
@@ -55,10 +55,10 @@ main_sub
 		bl contextSwitch
 		b subloop
 
-; undef -
+; undefinedInstruction -
 ;
 ;- 
-undef
+undefinedInstruction
 
 ; superVisorCall -
 ;
