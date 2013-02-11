@@ -1,6 +1,10 @@
 ; context_switcher -------------------------------------------------------------
 ;
+;
 ;-------------------------------------------------------------------------------
+
+;TODO: test getNextPID
+;TODO: line 118; ;need to fix this in the case where PID not found
 
 TEMP_IRQ_LR EQU &9D4
 TEMP_R0 EQU &9D8
@@ -23,15 +27,13 @@ PROCESS_ID_COUNTER EQU &AF8
 contextSwitch
 	adrl sp, temp_stack
 
-	; store r0 temporarily
-	push {r1}
+	push {r1} ; store r0 temporarily
 	push {r0}
 	ldr r0, =TEMP_R0
 	pop {r1}
 	str r1, [r0]
 
-	; store r1 temporarily
-	ldr r0, =TEMP_R1
+	ldr r0, =TEMP_R1 ; store r1 temporarily
 	pop {r1}
 	str r1, [r0]
 
@@ -44,8 +46,7 @@ contextSwitch
 	ldr r0, =TEMP_IRQ_LR
 	str lr, [r1]
 	
-	; store the IRQ CPSR
-	mrs r0, cpsr
+	mrs r0, cpsr ; store the IRQ CPSR
 	ldr r1, =TEMP_IRQ_CPSR
 	str r0, [r1]
 
@@ -54,47 +55,85 @@ contextSwitch
 
 	; Now should be in System Mode
 
-	; get the current PID
-	ldr r0, =CURRENT_PROCESS_ID
+	ldr r0, =CURRENT_PROCESS_ID ; get the current PID
 	ldr r0, [r0]
 
-	; find the process's pcb address
-	bl findPCBAddress
+	bl findPCBAddress ; find the process's pcb address
 
-	ldr r1, =PCB_PTR
+	bl storeToPCB ;store to PCB
+
+	;ldr r1, =PCB_PTR
 
 	; push the System CPSR
-	ldr r0, =TEMP_SYSTEM_CPSR
-	ldr r1, [r0]
-	push {r1}
+	;ldr r0, =TEMP_SYSTEM_CPSR
+	;ldr r1, [r0]
+	;push {r1}
 
-	ldr r0, =TEMP_R0 ; restore r0.
-	ldr r0, [r0]
-	ldr r1, =TEMP_R1 ; restore r1
-	ldr r1, [r1] 
+	;ldr r0, =TEMP_R0 ; restore r0.
+	;ldr r0, [r0]
+	;ldr r1, =TEMP_R1 ; restore r1
+	;ldr r1, [r1] 
 
-	; push the all registers of process we are switching out of
-	push {r0-r12, lr}
+	;push {r0-r12, lr} ; push the all registers of process we are switching out
 
 	; push the PC of the process we are switching out of
-	ldr r0, =TEMP_IRQ_LR ; this is the PC of the System / User Mode process
-	ldr r1, [r0]
-	push {r1}
-	bl storeSP ; Store the current process's SP.
+	;ldr r0, =TEMP_IRQ_LR ; this is the PC of the System / User Mode process
+	;ldr r1, [r0]
+	;push {r1}
+	;bl storeSP ; Store the current process's SP.
 
 	; Now get the next process to be run
 	bl getNextPID
 	bl getPID_SP_Addr
 	mov sp, r0
-	pop {r0} ; pop off the CPSR of the process (i.e. get the status bits)
+	
+	;pop {r0} ; pop off the CPSR of the process (i.e. get the status bits)
+	
 	msr cpsr_c, r0 ; switch to User Mode
-	pop {r0-r12, lr} 
-	pop {pc} ; state of process should now be as we left it.
+	
+	;pop {r0-r12, lr} 
+
+	;pop {pc} ; state of process should now be as we left it.
 
 	; Need to re-enable IRQs & FIQs here.
 
 	; Return to process
 	mov pc, lr ; probably the incorrect way to do this
+
+storeToPCB
+	ldr r1, =CURRENT_PROCESS_ID ; get the current PID
+	ldr r1, [r1]
+
+	str r1, [r0], #4 ; store the PID
+
+	ldr r1, =TEMP_R0 ;get r0
+	ldr r1, [r1] ;get r0
+	str r1, [r0], #4 ;store r1
+
+	ldr r1, =TEMP_R1 ;get r1
+	ldr r1, [r1] ; get r1
+	str r1, [r0], #4 ;store r1
+
+	str r2, [r0], #4
+	str r3, [r0], #4
+	str r4, [r0], #4
+	str r5, [r0], #4
+	str r6, [r0], #4
+	str r7, [r0], #4
+	str r8, [r0], #4
+	str r9, [r0], #4
+	str r10, [r0], #4
+	str r11, [r0], #4
+	str r12, [r0], #4
+	str sp, [r0], #4
+	str lr, [r0], #4 ;******THIS MIGHT BE A PROBLEM****** (not user's lr?)
+	str pc, [r0], #4
+
+	ldr r1, =TEMP_SYSTEM_CPSR ;get the user mode CPSR
+	ldr r1, [r1] ;get the user mode CPSR
+	str r1, [r0] ; store the user mode CPSR
+
+	mov pc, lr
 
 ; findPCBAddress ---------------------------------------------------------------
 ; Returns the pcb address of the PID specified.
@@ -111,11 +150,14 @@ contextSwitch
 findPCBAddress
 	push {r2}
 	ldr r1, =BOTTOM_OF_QUEUE
-	findPCBLoop
+	ldr r1, [r1]
+	;need to fix this in the case where PID not found
+	findPCBLoop ;loop until r2=r1. 
 		ldr r2, [r1], #8
 		cmp r2, r0
 		bne findPCBLoop
-	ldr r0, [r1, #-12]
+
+	ldr r0, [r1, #-4] ;load the PCB address into r0
 	pop {r2}
 	mov pc, lr
 
@@ -154,8 +196,42 @@ getPID_SP_Addr
 ; gets the top PID of the queue, and moves it to the bottom. also, stores the
 ; PID to [CURRENT_PROCESS_ID]
 ;-------------------------------------------------------------------------------
-getNextPID
-	;TODO
+getNextPID ;getNextPID
+	ldr r2, =TOP_OF_QUEUE
+	ldr r0, [r2]
+	ldr r0, [r2, #-8] ;get the top PID of the queue
+	ldr r1, [r2, #-4] ;get the top PCB-Address of the queue
+	push {r0, r1}
+	sub r2, r2, #12
+	mov r1, r2
+	add r1, r1, #8
+
+	PIDLoop
+		ldr r3, =BOTTOM_OF_QUEUE ; check for bottom of queue
+		ldr r3, [r3]
+		ldr r3, [r3] ;get PID
+		cmp r3, r2
+		beq endOfQueue
+		ldr r0, [r2], #-4 
+		str r0, [r1], #-4 ;move PID down
+		ldr r0, [r2], #-4
+		str r0, [r1], #-4 ;move PCB-address down
+		b PIDLoop
+
+	endOfQueue ;reached the end of the queue.
+		ldr r0, [r2], #-4
+		str r0, [r1], #-4 ;move PID down
+		ldr r0, [r2], #-4
+		str r0, [r1], #-4 ;move PCB-address
+		pop {r0}
+		str r0, [r1], #-4 ;store PID down
+		pop {r0}
+		str r0, [r1] ;store PCB-address
+
+	;TODO store the PID to [CURRENT_PROCESS_ID]
+	;TODO TEST THIS.
+
+	
 
 ; initalizeLinkedList ----------------------------------------------------------
 ; Sets the top and the bottom of the linked list queue to be at the address
@@ -172,45 +248,6 @@ initializeLinkedList
 	str r1, [r0]
 	ldr r0, =BOTTOM_OF_QUEUE
 	str r1, [r0]
-
-	mov pc, lr
-
-; addNewProcess ----------------------------------------------------------------
-; Stores the first instruction of the new process to a new area in linked list.
-;
-; registers used:
-;
-; input:-
-; r0: the PCB address of the new process
-;
-; general:-
-; r1: the PID of the process
-; r2: the address of BOTTOM_OF_QUEUE
-; r3: the value stored at the pointer retrieved from BOTTOM_OF_QUEUE
-;
-; Cref: void addNewProcess(uint32 PID, uint32 PC)
-;-------------------------------------------------------------------------------
-addNewProcess
-
-	; get the PID, update, and store it back.
-	ldr r1, =PROCESS_ID_COUNTER
-	ldr r2, [r1]
-	add r2, r2, #1
-	str r2, [r1]
-	mov r1, r2
-
-	; get the address of the bottom of the queue
-	ldr r2, =BOTTOM_OF_QUEUE
-	ldr r3, [r2]
-
-	; update the new bottom of the queue
-	sub r3, r3, #8
-	str r3, [r2]
-
-	; store the PCB address at relative #4
-	str r0, [r3], #4
-	; store the PID at relative #0
-	str r1, [r3]
 
 	mov pc, lr
 
