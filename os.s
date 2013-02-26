@@ -38,7 +38,7 @@ runActiveProcess
 	cmp r1, #0 ; is there anything in the ACTIVE_PCB?
 
 	push {lr}
-	blne getNextProcess ;nope
+	ble getNextProcess ;nope
 	pop {lr}
 
 	; now there should be if there wasn't.
@@ -46,7 +46,7 @@ runActiveProcess
 	ldr r1, [r0]
 
 	; now we want to move all of the pcb registers into the user's registers
-	ldm	r0, {r0-r14}^
+	ldmia r0, {r0-r14}^
 
 	; then we want to move the pcb CPSR into the SPSR
 	ldr r0, =ACTIVE_PCB
@@ -54,7 +54,7 @@ runActiveProcess
 	msr spsr, r1 ;put pcb cpsr into spsr
 
 	; then we want to 'return' to user mode
-	mov r1, [r0, #60] ;load process's pc into r1
+	ldr r1, [r0, #60] ;load process's pc into r1
 	movs pc, r1 ;return to user mode.
 
 ; main_add ---------------------------------------------------------------------
