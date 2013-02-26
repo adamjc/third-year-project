@@ -97,6 +97,8 @@ moveFreeToReadyQueue
 ; moves the top pcb in the READY queue to the active queue
 ;-------------------------------------------------------------------------------
 getNextProcess
+	;TODO
+	
 
 ; moveActiveToReadyQueue -------------------------------------------------------
 ; moves the pcb from the active queue to the ready queue
@@ -118,16 +120,21 @@ moveActiveToReadyQueue
 
 	movActvToRdyTail
 		;the READY_PCB is not empty, add pcb addr to end of the queue
-		ldr r0, =READY_PCB_TAIL ;points to the last pcb's ptr
-		ldr r0, [r0] ; we now have the address of the last pcb's ptr
+		ldr r1, =READY_PCB_TAIL ;points to the last pcb's ptr
+		ldr r1, [r1] ; we now have the address of the last pcb's ptr
 
-	; TODO
+		; we want to update the ptr ACTIVE_PCB is currently pointing to
+		ldr r0, =ACTIVE_PCB
+		ldr r0, [r0] ; we now have the address of the active pcb's address
 
+		str r0, [r1] ; add the address of the active pcb to the end of READY_PCB
 
+		mov r0, #0
+		ldr r1, =ACTIVE_PCB
+		str r0, [r1] ; nothing in the active queue now, make it null.
 
-
-
-
+		mov r0, #1 ; success
+		mov pc, lr ; process that was active is now at end of READY_PCB
 
 pcb_start
 	defs 76
