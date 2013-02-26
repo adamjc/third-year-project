@@ -66,6 +66,7 @@ storeToPCB
 	ldr r1, [r1] ; get r1
 	str r1, [r0], #4 ;store r1
 
+	; replace this with stmia, also ^ it.
 	str r2, [r0], #4
 	str r3, [r0], #4
 	str r4, [r0], #4
