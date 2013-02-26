@@ -1,7 +1,7 @@
 FREE_PCB	EQU		&9E8
 ACTIVE_PCB	EQU		&9EC
 READY_PCB	EQU		&9F0
-READY_PCB_TAIL	EQU	&9F4
+READY_PCB_TAIL	EQU		&9F4
 
 ; PCB --------------------------------------------------------------------------
 ; Process Control Block
@@ -31,12 +31,12 @@ initialise_PCB
 	mov r1, #0 ;null pointer
 	str r1, [r0] ;store null pointer in the pcb address
 
-	; this is one of the first things the kernel does, so no active processes
+	; this is one of the first things the kernel does, no active processes
 	ldr r1, =ACTIVE_PCB
 	mov r0, #0
 	str r0, [r1] ;make ACTIVE_PCB null
 
-	; this is one of the first things the kernel does, so no ready processes
+	; this is one of the first things the kernel does, no ready processes
 	ldr r1, =READY_PCB
 	str r0, [r1] ;make READY_PCB null
 
@@ -46,7 +46,7 @@ initialise_PCB
 
 	mov pc, lr
 
-; moveFreeToReadyQueue -------------------------------------------------------------
+; moveFreeToReadyQueue ---------------------------------------------------------
 ; movees r0 (the processes PCB address) out of the FREE_PCB queue and into the
 ; ready queue, waiting for execution.
 ;
@@ -56,7 +56,7 @@ initialise_PCB
 moveFreeToReadyQueue
 	;we are always grabbing from the top of the FREE queue (eg. FREE_PTR)
 
-	;want to look at ready queue FIRST to see if there are any processes currently in it.
+	;look at ready queue FIRST, see if there are any pcbs currently in it.
 	ldr r1, =READY_PCB
 	ldr r2, [r1] 
 	cmp r2, #0
@@ -66,22 +66,22 @@ moveFreeToReadyQueue
 
 	; now we want to update FREE_PTR
 	add r0, r0, #68 
-	ldr r2, [r0] ; get the pointer address of the grabbed pcb (eg. the next free pcb)
+	ldr r2, [r0] ; get ptr address of the grabbed pcb (the next free pcb)
 	ldr r1, =FREE_PCB
-	str r2, [r1] ;update the FREE_PTR
+	str r2, [r1] ; update the FREE_PTR
 
 	; now we want to update the pointer of the grabbed pcb to null
-	mov r1, #0 ;null pointer
-	str r1, [r0] ;put null pointer in the ptr_address of the grabbed pcb
+	mov r1, #0 ; null pointer
+	str r1, [r0] ; put null pointer in the ptr_address of the grabbed pcb
 
 	; need to update READY_PCB_TAIL to be grabbed pcb's ptr address
 	ldr r1, =READY_PCB_TAIL
-	str r0, [r1] ; put the grabbed pcb's ptr to the next pcb in READY_PCB_TAIL
+	str r0, [r1] ; put grabbed pcb's ptr to the next pcb in READY_PCB_TAIL
 
 	mov pc, lr ; grabbed pcb is now at top of READY_PCB
 
 	movFreeToRdyTail
-		;the READY_PCB is not empty, we want to add this pcb ptr to the end then
+		; READY_PCB is not empty, we add this pcb ptr to the end then
 		ldr r1, =READY_PCB_TAIL ;points to the last pcb's ptr
 		ldr r1, [r1] ;we now have the address of the last pcb's ptr
 		str r2, [r1] ;the grabbed pcb is now the last pcb
@@ -106,7 +106,7 @@ getNextProcess
 ; 	r0: #0 if it failed (nothing in the ready queue), #1 if successful
 ;-------------------------------------------------------------------------------
 moveActiveToReadyQueue
-	;want to look at ready queue FIRST to see if there are any processes currently in it.
+	; look at ready queue FIRST, see if there are any procs currently in it
 	ldr r0, =ACTIVE_PCB
 	ldr r1, =READY_PCB
 	ldr r2, [r1] 
@@ -114,10 +114,10 @@ moveActiveToReadyQueue
 	bne movActvToRdyTail ; the READY_PCB is not empty
 
 	mov r0, #0
-	mov pc, lr ; the READY_PCB is empty - this is the only process running, do nothing.
+	mov pc, lr ; the READY_PCB is empty - this is the only proc running
 
 	movActvToRdyTail
-		;the READY_PCB is not empty, we want to add this pcb addr to the end of the queue
+		;the READY_PCB is not empty, add pcb addr to end of the queue
 		ldr r0, =READY_PCB_TAIL ;points to the last pcb's ptr
 		ldr r0, [r0] ; we now have the address of the last pcb's ptr
 
