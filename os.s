@@ -2,12 +2,6 @@
 ; AdamOS
 ;
 
-;TODO: Find way to use timer to call interrupts in software
-;TODO: Add a round-robin scheduler
-;TODO: Add dynamic memory
-;TODO: Add dynamically added processes
-
-
 ; Exception Vectors ------------------------------------------------------------
 b	main					; reset
 b	undefinedInstruction	; undefined instruction
@@ -47,11 +41,21 @@ runActiveProcess
 	blne getNextProcess ;nope
 	pop {lr}
 
-	;yes
+	; now there should be if there wasn't.
+	ldr r0, =ACTIVE_PCB
+	ldr r1, [r0]
 
+	; now we want to move all of the pcb registers into the user's registers
+	ldm	r0, {r0-r14}^
 
+	; then we want to move the pcb CPSR into the SPSR
+	ldr r0, =ACTIVE_PCB
+	ldr r1, [r0, #64]
+	msr spsr, r1 ;put pcb cpsr into spsr
 
-
+	; then we want to 'return' to user mode
+	mov r1, [r0, #60] ;load process's pc into r1
+	movs pc, r1 ;return to user mode.
 
 ; main_add ---------------------------------------------------------------------
 ; testing the context switcher
@@ -90,6 +94,9 @@ addNewProcess
 	ldr r1, [r1] ;get a free PCB
 
 	str r0, [r1, #60] ;update the pcb with the new processes PC location
+
+	mov r0, #&50 ;"make" a new CPSR
+	str r0, [r1, #64] ;store it in the pcb's CPSR spot.
 
 	mov r0, r1 ; r0 is now the ptr to the grabbed pcb
 	;we want to move the PCB we have acquired into the READY queue
