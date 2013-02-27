@@ -84,21 +84,43 @@ moveFreeToReadyQueue
 		; READY_PCB is not empty, we add this pcb ptr to the end then
 		ldr r1, =READY_PCB_TAIL ;points to the last pcb's ptr
 		ldr r1, [r1] ;we now have the address of the last pcb's ptr
-		str r2, [r1] ;the grabbed pcb is now the last pcb
+		str r0, [r1] ;the grabbed pcb is now the last pcb
+
+		; update READY_PCB_TAIL too
+		ldr r1, =READY_PCB_TAIL
+		str r0, [r1] ; [READY_PCB_TAIL] is now the last pcb's address
 
 		;therefore, make the grabbed pcb's ptr null
 		add r0, r0, #68 ;get the pointer address of the grabbed pcb
 		mov r1, #0
 		str r1, [r0] ; make the pointer address null
 
-	mov pc, lr ;grabbed ocb is now at tail of READY_PCB
+	mov pc, lr ;grabbed pcb is now at tail of READY_PCB
 
-; getNextProcess ---------------------------------------------------------------
+; updateActiveProcess ---------------------------------------------------------------
 ; moves the top pcb in the READY queue to the active queue
 ;-------------------------------------------------------------------------------
-getNextProcess
-	;TODO
-	
+updateActiveProcess
+	; get the top pcb in the READY_PCB queue
+	ldr r0, =READY_PCB
+	ldr r0, [r0] ; got the top pcb address
+
+	; move it to ACTIVE_PCB
+	ldr r1, =ACTIVE_PCB
+	str r0, [r1] 
+
+	; update READY_PCB with the pcb's ptr address
+	ldr r2, [r0, #68] ; get the ptr to the next pcb
+	ldr r0, =READY_PCB
+	str r2, [r0] ; READY_PCB now points to the new head of the queue
+
+	; make the active process pcb's ptr null
+	ldr r1, [r1, #68] ; get the active processes pcb ptr
+	mov r0, #0
+	str r0, [r1] ; make it null
+
+	; done
+	mov pc, lr ; the top pcb in READY_PCB is now in ACTIVE_PCB	
 
 ; moveActiveToReadyQueue -------------------------------------------------------
 ; moves the pcb from the active queue to the ready queue

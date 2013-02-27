@@ -38,15 +38,16 @@ runActiveProcess
 	cmp r1, #0 ; is there anything in the ACTIVE_PCB?
 
 	push {lr}
-	ble getNextProcess ;nope
+	bleq updateActiveProcess ;nope
 	pop {lr}
 
 	; now there should be if there wasn't.
-	ldr r0, =ACTIVE_PCB
-	ldr r1, [r0]
+	ldr r13, =ACTIVE_PCB
+	ldr r13, [r13]
 
 	; now we want to move all of the pcb registers into the user's registers
-	ldmia r0, {r0-r14}^
+	;TODO
+	ldmia r13!, {r0-r12}
 
 	; then we want to move the pcb CPSR into the SPSR
 	ldr r0, =ACTIVE_PCB
