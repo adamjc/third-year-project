@@ -97,7 +97,7 @@ moveFreeToReadyQueue
 
 	mov pc, lr ;grabbed pcb is now at tail of READY_PCB
 
-; updateActiveProcess ---------------------------------------------------------------
+; updateActiveProcess ----------------------------------------------------------
 ; moves the top pcb in the READY queue to the active queue
 ;-------------------------------------------------------------------------------
 updateActiveProcess

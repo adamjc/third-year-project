@@ -15,6 +15,16 @@ TEMP_SYSTEM_CPSR EQU &9E4
 ; and continues from where the process just switched into left off.
 ;-------------------------------------------------------------------------------
 contextSwitch
+	; TODO
+	; TEST
+	
+	bl storeActiveProcess
+	bl moveActiveToReadyQueue
+	bl updateActiveProcess
+	bl runActiveProcess
+
+	; done
+
 	adrl sp, temp_stack
 
 	push {r1} ; store r0 temporarily

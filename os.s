@@ -33,6 +33,8 @@ main
 ; the first process off the ready queue.
 ;-------------------------------------------------------------------------------
 runActiveProcess
+	; TEST
+
 	ldr r0, =ACTIVE_PCB
 	ldr r1, [r0]
 	cmp r1, #0 ; is there anything in the ACTIVE_PCB?
@@ -45,18 +47,45 @@ runActiveProcess
 	ldr r13, =ACTIVE_PCB
 	ldr r13, [r13]
 
-	; now we want to move all of the pcb registers into the user's registers
-	;TODO
-	ldmia r13!, {r0-r12}
-
-	; then we want to move the pcb CPSR into the SPSR
+	; update the SPSR
 	ldr r0, =ACTIVE_PCB
 	ldr r1, [r0, #64]
-	msr spsr, r1 ;put pcb cpsr into spsr
+	msr spsr, r1 ; put pcb cpsr into spsr
+
+	; move r0-r12 from the pcb into our registers
+	ldmia r13!, {r0-r12}
+
+	; update the SP
+	ldr r14, r13
+	ldmia r14!, {r13}^
+
+	; update the LR
+	ldmia r14!, {r14}^
 
 	; then we want to 'return' to user mode
-	ldr r1, [r0, #60] ;load process's pc into r1
-	movs pc, r1 ;return to user mode.
+	ldr r14, [r0, #60] ; load process's pc into r14
+	movs pc, r14 ; return to user mode.
+
+; storeActiveProcess -----------------------------------------------------------
+; stores user registers to the active_pcb
+;-------------------------------------------------------------------------------
+storeActiveProcess
+	; TODO
+	; TEST
+
+	; store r0-r14
+	ldr r13, =ACTIVE_PCB
+	stmia r13!, {r0-r14}^
+
+	; need to store user's pc (r14 of supervisor mode) [not yet though]
+	str r14, [r13], #4
+
+	; need to store SPSR
+	mrs r0, spsr
+	str r0, [r13]
+
+	; done
+	mov pc, lr
 
 ; main_add ---------------------------------------------------------------------
 ; testing the context switcher
