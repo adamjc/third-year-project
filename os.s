@@ -33,8 +33,6 @@ main
 ; the first process off the ready queue.
 ;-------------------------------------------------------------------------------
 runActiveProcess
-	; TEST
-
 	ldr r0, =ACTIVE_PCB
 	ldr r1, [r0]
 	cmp r1, #0 ; is there anything in the ACTIVE_PCB?
@@ -44,26 +42,26 @@ runActiveProcess
 	pop {lr}
 
 	; now there should be if there wasn't.
-	ldr r13, =ACTIVE_PCB
-	ldr r13, [r13]
+	ldr r14, =ACTIVE_PCB
+	ldr r14, [r14]
 
 	; update the SPSR
-	ldr r0, =ACTIVE_PCB
-	ldr r1, [r0, #64]
+	ldr r1, [r14, #64] 
 	msr spsr, r1 ; put pcb cpsr into spsr
 
 	; move r0-r12 from the pcb into our registers
-	ldmia r13!, {r0-r12}
+	ldmia r14!, {r0-r12}
 
 	; update the SP
-	ldr r14, r13
 	ldmia r14!, {r13}^
 
 	; update the LR
 	ldmia r14!, {r14}^
 
 	; then we want to 'return' to user mode
-	ldr r14, [r0, #60] ; load process's pc into r14
+	ldr r14, =ACTIVE_PCB
+	ldr r14, [r14]
+	ldr r14, [r14, #60] ; load process's pc into r14
 	movs pc, r14 ; return to user mode.
 
 ; storeActiveProcess -----------------------------------------------------------
@@ -73,16 +71,21 @@ storeActiveProcess
 	; TODO
 	; TEST
 
-	; store r0-r14
-	ldr r13, =ACTIVE_PCB
-	stmia r13!, {r0-r14}^
+	; store r0-r12/sp
+	ldr r14, =ACTIVE_PCB
+	ldr r14, [r14]
+	stmia r14!, {r0-r12}^
 
-	; need to store user's pc (r14 of supervisor mode) [not yet though]
-	str r14, [r13], #4
+	; need to store user mode sp
+
+	; need to store user mode pc (r14 of supervisor mode) [not yet though]
+	str r14, [r14], #4 ; store r14/lr
+
+
 
 	; need to store SPSR
 	mrs r0, spsr
-	str r0, [r13]
+	str r0, [r14]
 
 	; done
 	mov pc, lr
@@ -92,10 +95,11 @@ storeActiveProcess
 ;-------------------------------------------------------------------------------
 main_add
 	adrl sp, add_stack
-	mov r0, #0
+	mov r1, #0
 	addloop
-		add r0, r0, #1
-		bl contextSwitch
+		add r1, r1, #1
+		mov r0, #1 ; 1 is the opcode for contextswitch
+		svc YIELD
 		b addloop
 
 ; main_sub ---------------------------------------------------------------------
@@ -103,10 +107,10 @@ main_add
 ;-------------------------------------------------------------------------------
 main_sub
 	adrl sp, sub_stack
-	mov r0, #255
+	mov r1, #255
 	subloop
-		sub r0, r0, #1
-		bl contextSwitch
+		sub r1, r1, #1
+		svc YIELD
 		b subloop
 
 ; addNewProcess ----------------------------------------------------------------
@@ -145,6 +149,33 @@ undefinedInstruction
 ;
 ;-
 supervisorCall
+	;TODO
+	YIELD				EQU	&10
+	UPPER_BOUNDS_SVC	EQU	&20
+
+	push {lr} ;store user mode pc
+	ldr r14, [lr, #-4] ; read off svc code
+	bic r14, r14, #&FFFFFF00 ; mask off svc code
+
+	cmp r14, #UPPER_BOUNDS_SVC
+	bhi	unknown_svc ; process tried to access a function that doesn't exist
+
+	cmp r14, #YIELD
+	beq svc_context_switch
+
+; unknown_svc ------------------------------------------------------------------
+;
+;-------------------------------------------------------------------------------
+unknown_svc
+	; TODO
+	b reset
+
+; reset ------------------------------------------------------------------------
+;
+;-------------------------------------------------------------------------------
+reset
+	; TODO
+	b reset
 
 ; prefetchAbort -
 ;
