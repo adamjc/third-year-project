@@ -15,12 +15,12 @@ TEMP_SYSTEM_CPSR EQU &9E4
 ; and continues from where the process just switched into left off.
 ;-------------------------------------------------------------------------------
 svc_context_switch
-	; TODO
 	; TEST
-	
+	push {lr} ; lr is user mode pc, we don't want this to be removed with a bl
 	bl storeActiveProcess
 	bl moveActiveToReadyQueue
-	bl updateActiveProcess
+	cmp r0, #0
+	blne updateActiveProcess
 	bl runActiveProcess
 
 	; done

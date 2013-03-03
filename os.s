@@ -22,6 +22,7 @@ main
 
 	adrl r0, main_add
 	bl addNewProcess
+
 	adrl r0, main_sub
 	bl addNewProcess
 
@@ -68,27 +69,25 @@ runActiveProcess
 ; stores user registers to the active_pcb
 ;-------------------------------------------------------------------------------
 storeActiveProcess
-	; TODO
 	; TEST
 
-	; store r0-r12/sp
+	push {lr} ; push the link
+
 	ldr r14, =ACTIVE_PCB
 	ldr r14, [r14]
-	stmia r14!, {r0-r12}^
+	stmia r14!, {r0-r14}^ ; store user mode r0-r14
 
-	; need to store user mode sp
+	mov r0, r14
+	pop {lr, r1} ; get the link, and user mode pc
+	str r1, [r0] ; store user mode pc
 
-	; need to store user mode pc (r14 of supervisor mode) [not yet though]
-	str r14, [r14], #4 ; store r14/lr
+	ldr r1, =ACTIVE_PCB
+	ldr r1, [r1]
+	add r1, r1, #64 ; get stored CPSR address
+	mrs r0, spsr ; get SPSR
+	str r0, [r1] ; store SPSR
 
-
-
-	; need to store SPSR
-	mrs r0, spsr
-	str r0, [r14]
-
-	; done
-	mov pc, lr
+	mov pc, lr 	; done
 
 ; main_add ---------------------------------------------------------------------
 ; testing the context switcher
@@ -149,7 +148,6 @@ undefinedInstruction
 ;
 ;-
 supervisorCall
-	;TODO
 	YIELD				EQU	&10
 	UPPER_BOUNDS_SVC	EQU	&20
 
