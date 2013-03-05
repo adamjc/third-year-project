@@ -28,31 +28,31 @@ initialise_PCB
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, r0, #4
+	add r1, r0, #4 ;create the ptr address
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, r0, #4
+	add r1, r0, #4 ;create the ptr address
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, r0, #4
+	add r1, r0, #4 ;create the ptr address
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, r0, #4
+	add r1, r0, #4 ;create the ptr address
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, r0, #4
+	add r1, r0, #4 ;create the ptr address
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, r0, #4
+	add r1, r0, #4 ;create the ptr address
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, #0
+	add r1, r0, #4 ;create the ptr address
 	str r1, [r0] ;store null pointer in the pcb address
 
 	; this is one of the first things the kernel does, no active processes
