@@ -40,7 +40,7 @@ initialise_PCB
 	ldr r1, =READY_PCB
 	str r0, [r1] ;make READY_PCB null
 
-	; the tail of the READY_PCB is obviously also null
+	; the tail of the READY_PCB is also null
 	ldr r1, =READY_PCB_TAIL
 	str r0, [r1] ;make READY_PCB_TAIL null
 
@@ -88,10 +88,10 @@ moveFreeToReadyQueue
 
 		; update READY_PCB_TAIL too
 		ldr r1, =READY_PCB_TAIL
-		str r0, [r1] ; [READY_PCB_TAIL] is now the last pcb's address
+		add r0, r0, #68
+		str r0, [r1] ; [READY_PCB_TAIL] is now the last pcb's ptr address
 
 		;therefore, make the grabbed pcb's ptr null
-		add r0, r0, #68 ;get the pointer address of the grabbed pcb
 		mov r1, #0
 		str r1, [r0] ; make the pointer address null
 

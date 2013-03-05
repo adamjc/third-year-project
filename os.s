@@ -78,7 +78,8 @@ storeActiveProcess
 	stmia r14!, {r0-r14}^ ; store user mode r0-r14
 
 	mov r0, r14
-	pop {lr, r1} ; get the link, and user mode pc
+	pop {lr} ; get the link, and user mode pc
+	pop {r1}
 	str r1, [r0] ; store user mode pc
 
 	ldr r1, =ACTIVE_PCB
