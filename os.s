@@ -101,29 +101,6 @@ storeActiveProcess
 
 	mov pc, lr 	; done
 
-; main_add ---------------------------------------------------------------------
-; testing the context switcher
-;-------------------------------------------------------------------------------
-main_add
-	adrl sp, add_stack
-	mov r1, #0
-	addloop
-		add r1, r1, #1
-		mov r0, #1 ; 1 is the opcode for contextswitch
-		svc YIELD
-		b addloop
-
-; main_sub ---------------------------------------------------------------------
-; testing the context switcher
-;-------------------------------------------------------------------------------
-main_sub
-	adrl sp, sub_stack
-	mov r1, #255
-	subloop
-		sub r1, r1, #1
-		svc YIELD
-		b subloop
-
 ; addNewProcess ----------------------------------------------------------------
 ; registers used:
 ;
