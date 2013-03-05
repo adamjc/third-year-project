@@ -6,7 +6,7 @@ READY_PCB_TAIL	EQU		&9F4
 ; PCB --------------------------------------------------------------------------
 ; Process Control Block
 ;
-; Each process requires 72 bytes of storages (18 32-bit values)
+; Each process requires 72 bytes of storage (18 32-bit values)
 ;
 ; Outline of values in each process block:
 ; #0-#48 stores r0-r12
@@ -28,7 +28,31 @@ initialise_PCB
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
-	mov r1, #0 ;null pointer
+	mov r1, r0, #4
+	str r1, [r0] ;store the ptr address in the ptr section of the pcb
+
+	add r0, r0, #72 ;move to the ptr section of the next pcb
+	mov r1, r0, #4
+	str r1, [r0] ;store the ptr address in the ptr section of the pcb
+
+	add r0, r0, #72 ;move to the ptr section of the next pcb
+	mov r1, r0, #4
+	str r1, [r0] ;store the ptr address in the ptr section of the pcb
+
+	add r0, r0, #72 ;move to the ptr section of the next pcb
+	mov r1, r0, #4
+	str r1, [r0] ;store the ptr address in the ptr section of the pcb
+
+	add r0, r0, #72 ;move to the ptr section of the next pcb
+	mov r1, r0, #4
+	str r1, [r0] ;store the ptr address in the ptr section of the pcb
+
+	add r0, r0, #72 ;move to the ptr section of the next pcb
+	mov r1, r0, #4
+	str r1, [r0] ;store the ptr address in the ptr section of the pcb
+
+	add r0, r0, #72 ;move to the ptr section of the next pcb
+	mov r1, #0
 	str r1, [r0] ;store null pointer in the pcb address
 
 	; this is one of the first things the kernel does, no active processes
@@ -159,5 +183,11 @@ moveActiveToReadyQueue
 		mov pc, lr ; process that was active is now at end of READY_PCB
 
 pcb_start
+	defs 76
+	defs 76
+	defs 76
+	defs 76
+	defs 76
+	defs 76
 	defs 76
 	defs 76

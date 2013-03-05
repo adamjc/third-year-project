@@ -20,10 +20,14 @@ main
 
 	bl initialise_PCB
 
-	adrl r0, main_add
+	adrl r0, led_flash
+	mov r1, #left_red
+	adrl r2, proc_1
 	bl addNewProcess
 
-	adrl r0, main_sub
+	adrl r0, led_flash
+	mov r1, #right_red
+	adrl r2, proc_2
 	bl addNewProcess
 
 	; run the first process
@@ -118,21 +122,25 @@ main_sub
 ;
 ; input:-
 ; r0: the address of the program to run
+; r1: any parameters to the program
+; r2: the address of the processes stack
 ;
 ; general:-
 ;
 ; Cref: void addNewProcess(uint32 PC)
 ;-------------------------------------------------------------------------------
 addNewProcess
-	ldr r1, =FREE_PCB ;get a free PCB
-	ldr r1, [r1] ;get a free PCB
+	ldr r3, =FREE_PCB ;get a free PCB
+	ldr r3, [r3] ;get a free PCB
 
-	str r0, [r1, #60] ;update the pcb with the new processes PC location
+	str r0, [r3, #60] ;update the pcb with the new processes PC location
+	str r1, [r3] ; update the pcb with the input parameter (processes r0)
+	str r2, [r3, #52] ; store the SP 
 
 	mov r0, #&50 ;"make" a new CPSR
-	str r0, [r1, #64] ;store it in the pcb's CPSR spot.
+	str r0, [r3, #64] ;store it in the pcb's CPSR spot.
 
-	mov r0, r1 ; r0 is now the ptr to the grabbed pcb
+	mov r0, r3 ; r0 is now the ptr to the grabbed pcb
 	;we want to move the PCB we have acquired into the READY queue
 	push {lr}
 	bl moveFreeToReadyQueue
@@ -200,9 +208,23 @@ fiqRoutine
 os_stack
 
 	defs 96
-add_stack
+proc_1
 	defs 96
-sub_stack
+proc_2
+	defs 96
+proc_3
+	defs 96
+proc_4
+	defs 96
+proc_5
+	defs 96
+proc_6
+	defs 96
+proc_7
+	defs 96
+proc_8
 
 include context_switcher.s
 include pcb.s
+include led.s
+include ports.s
