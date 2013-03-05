@@ -1,6 +1,13 @@
 ;
 ; AdamOS
 ;
+; TODO
+; implement interrupts
+; implement timer compare
+; make the interrupt call the context switcher
+; add button functionality to ADD an LED process
+; add button functionality to REMOVE an LED process
+; implement a physical memory manager (no address space unfortunately)
 
 ; Exception Vectors ------------------------------------------------------------
 b	main					; reset

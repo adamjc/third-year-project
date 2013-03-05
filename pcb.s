@@ -143,7 +143,6 @@ updateActiveProcess
 	mov r0, #0
 	str r0, [r1] ; make it null
 
-	; done
 	mov pc, lr ; the top pcb in READY_PCB is now in ACTIVE_PCB	
 
 ; moveActiveToReadyQueue -------------------------------------------------------

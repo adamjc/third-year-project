@@ -15,14 +15,11 @@ TEMP_SYSTEM_CPSR EQU &9E4
 ; and continues from where the process just switched into left off.
 ;-------------------------------------------------------------------------------
 svc_context_switch
-	; TEST
 	bl storeActiveProcess
 	bl moveActiveToReadyQueue
 	cmp r0, #0
 	blne updateActiveProcess
 	bl runActiveProcess
-
-	; done
 
 	defs 96
 temp_stack	
