@@ -10,7 +10,7 @@ led_flash
 	bhi	led_flash_error ; process tried to access led that doesn't exist
 	mov r6, r0
 
-	b led_loop
+	led_loop
 		ldr r1, [r5] ; get the led assignments
 		orr r1, r6, r1 ; turn r0 on, leave others alone
 		strb r1, [r5] ; turn the led on
