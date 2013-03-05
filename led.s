@@ -20,7 +20,7 @@ led_flash
 		; now we want to turn the led off
 		ldr r1, [r5] ; get the led assignments
 		and r1, r6, r1 
-		xor r1, r6, r1 ; turn r0 off, leave others alone
+		eor r1, r6, r1 ; turn r0 off, leave others alone
 		strb r1, [r5] ; turn the led off
 		mov r0, #&40000
 		bl led_delay ; wait for a bit
