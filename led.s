@@ -11,19 +11,20 @@ led_flash
 	mov r6, r0
 
 	led_loop
-		ldr r1, [r5] ; get the led assignments
-		orr r1, r6, r1 ; turn r0 on, leave others alone
-		strb r1, [r5] ; turn the led on
+		mov r0, r6
+		svc SET_LEDS
+
 		mov r0, #&40000
 		bl led_delay ; wait for a bit
 
 		; now we want to turn the led off
-		ldr r1, [r5] ; get the led assignments
-		and r1, r6, r1 
-		eor r1, r6, r1 ; turn r0 off, leave others alone
-		strb r1, [r5] ; turn the led off
+		mov r0, r6
+		svc UNSET_LEDS
+
 		mov r0, #&40000
 		bl led_delay ; wait for a bit
+
+		svc YIELD
 
 		b led_loop
 
@@ -41,3 +42,41 @@ led_delay
 	cmp r0, #0
 	bne led_delay
 	mov pc, lr
+
+; svc_get_leds -----------------------------------------------------------------
+; gets the current led assignments
+; output:
+;	r0: the current led assignments
+; ------------------------------------------------------------------------------
+svc_get_leds
+	ldr r0, =port_area
+	ldr r0, [r0]
+	pop {lr}
+	movs pc, lr
+
+; svc_set_leds -----------------------------------------------------------------
+; sets the led assignments
+; input:
+;	r0: the led assignments to set
+; ------------------------------------------------------------------------------
+svc_set_leds
+	ldr r1, =port_area
+	ldr r2, [r1] ; get the led assignments
+	orr r0, r0, r2 ; set the led on, without affecting others
+	strb r0, [r1] ; store it to the port area
+	pop {lr}
+	movs pc, lr
+
+; svc_unset_leds ----------------------------------------------------------------
+; turns the led(s) specified, off.
+; input:
+;	r0: the led(s) to turn off.
+; ------------------------------------------------------------------------------
+svc_unset_leds
+	ldr r1, =port_area
+	ldr r2, [r1] ; get the led assignments
+	and r0, r0, r2
+	eor r0, r0, r2 ; set the led(s) specified, off, leave others on
+	strb r0, [r1] ; store it to the port area
+	pop {lr}
+	movs pc, lr

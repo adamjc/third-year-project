@@ -11,13 +11,13 @@
 
 ; Exception Vectors ------------------------------------------------------------
 b	main					; reset
-b	undefinedInstruction	; undefined instruction
-b	supervisorCall			; svc
-b	prefetchAbort			; tried executing code from non-existing memory
-b	dataAbort				; data error (e.g. accessed out of bounds area)
+b	undef_inst				; undefined instruction
+b	supervisor_call			; svc
+b	prefetch_abort			; tried executing code from non-existing memory
+b	data_abort				; data error (e.g. accessed out of bounds area)
 nop
-b	irqRoutine				; interrupt request
-b	fiqRoutine				; fast interrupt request
+b	irq_routine				; interrupt request
+b	fiq_routine				; fast interrupt request
 
 ; main -------------------------------------------------------------------------
 ;
@@ -36,6 +36,20 @@ main
 	mov r1, #right_red
 	adrl r2, proc_2
 	bl addNewProcess
+
+	adrl r0, led_flash
+	mov r1, #left_blue
+	adrl r2, proc_3
+	bl addNewProcess
+
+	adrl r0, led_flash
+	mov r1, #right_amber
+	adrl r2, proc_4
+	bl addNewProcess
+
+	bl enable_interrupts
+	bl set_interrupts
+	bl set_timer_compare
 
 	; run the first process
 	bl runActiveProcess
@@ -80,8 +94,6 @@ runActiveProcess
 ; stores user registers to the active_pcb
 ;-------------------------------------------------------------------------------
 storeActiveProcess
-	; TEST
-
 	push {lr} ; push the link
 
 	ldr r14, =ACTIVE_PCB
@@ -132,17 +144,21 @@ addNewProcess
 
 	mov pc, lr
 
-; undefinedInstruction -
+; undefinedInstruction ---------------------------------------------------------
 ;
-;- 
-undefinedInstruction
+; ------------------------------------------------------------------------------
+undef_inst
 
-; superVisorCall -
+; supervisor_call --------------------------------------------------------------
 ;
-;-
-supervisorCall
+; ------------------------------------------------------------------------------
+supervisor_call
 	YIELD				EQU	&10
-	UPPER_BOUNDS_SVC	EQU	&20
+	GET_LEDS			EQU &20
+	SET_LEDS			EQU &30
+	UNSET_LEDS			EQU &40
+	GET_TIME 			EQU &50
+	UPPER_BOUNDS_SVC	EQU	&50
 
 	push {lr} ;store user mode pc
 	ldr r14, [lr, #-4] ; read off svc code
@@ -154,39 +170,125 @@ supervisorCall
 	cmp r14, #YIELD
 	beq svc_context_switch
 
+	cmp r14, #GET_LEDS
+	beq svc_get_leds
+
+	cmp r14, #SET_LEDS
+	beq svc_set_leds
+
+	cmp r14, #UNSET_LEDS
+	beq svc_unset_leds
+
+	cmp r14, #GET_TIME
+	beq svc_get_time
+
+; svc_get_time -----------------------------------------------------------------
+; gets the current value of the timer
+; output:
+;	r0: the current value of the timer
+; ------------------------------------------------------------------------------
+svc_get_time
+	pop {lr}
+	ldr r0, =port_area
+	ldr r0, [r0, #TIMER] ; get the timer value
+	movs pc, lr
+
+; get_time ---------------------------------------------------------------------
+; gets the current value of the timer ** supervisor mode only **
+; output:
+;	r0: the current value of the timer
+; ------------------------------------------------------------------------------
+get_time
+	ldr r0, =port_area
+	ldr r0, [r0, #TIMER] ; get the timer value
+	mov pc, lr
+
+; svc_set_timer_compare --------------------------------------------------------
+; sets the time to wait for until the timer compare interrupt is called.
+; hard coded to 250ms right now ** supervisor mode only **
+; ------------------------------------------------------------------------------
+svc_set_timer_compare
+
+; set_timer_compare ------------------------------------------------------------
+; sets the time to wait for until the timer compare interrupt is called.
+; hard coded to 250ms right now ** supervisor mode only **
+; ------------------------------------------------------------------------------
+set_timer_compare
+	push {lr}
+	bl get_time ; get the current counter time
+	pop {lr}
+	add r1, r0, #250 ; find the time 250ms from now
+	and r1, r1, #&ff ; modulo 256 (only 256 states in this counter)
+	ldr r2, =port_area
+	str r1, [r2, #TIMER_COMPARE] ; update the timer compare
+	mov pc, lr
+
+; set_interrupts ---------------------------------------------------------------
+; sets up the (active high) interrupts
+; ------------------------------------------------------------------------------
+set_interrupts
+	mov r0, #&01
+	ldr r1, =port_area
+	add r1, r1, #IRQ_EN
+	str r0, [r1]
+	mov pc, lr
+
+; disable_interrupts -----------------------------------------------------------
+; disables interrupts, we use this during 'interrupt_routine' as to allow
+; the current interrupt to finish before being interrupted.
+; ------------------------------------------------------------------------------
+disable_interrupts
+	mrs r0, cpsr
+	orr r0, r0, #&80
+	msr cpsr_c, r0
+	mov pc, lr
+
+; enable_interrupts ------------------------------------------------------------
+; enables interrupts, we use this to allow interrupts to be active after we have
+; finished processing the current interrupt.
+; ------------------------------------------------------------------------------
+enable_interrupts
+	mrs r0, cpsr
+	bic r0, r0, #&80 ; clear bit 7 (interrupt enable)
+	msr cpsr_c, r0
+	mov pc, lr
+
 ; unknown_svc ------------------------------------------------------------------
 ;
-;-------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
 unknown_svc
-	; TODO
 	b reset
 
 ; reset ------------------------------------------------------------------------
 ;
-;-------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
 reset
-	; TODO
 	b reset
 
-; prefetchAbort -
+; prefetch_abort ----------------------------------------------------------------
 ;
-;-
-prefetchAbort
+; ------------------------------------------------------------------------------
+prefetch_abort
+	b reset
 
-;- dataAbort
+; data_abort --------------------------------------------------------------------
 ;
-;-
-dataAbort
+; ------------------------------------------------------------------------------
+data_abort
+	b reset
 
-;- irqRoutine -
+; irq_routine ------------------------------------------------------------------
 ;
-;-
-irqRoutine
+; ------------------------------------------------------------------------------
+irq_routine
+	; TODO
+	bl disable_interrupts
 
-;- fiqRoutine
+; fiq_routine ------------------------------------------------------------------
 ;
-;-
-fiqRoutine
+; ------------------------------------------------------------------------------
+fiq_routine
+	b reset	
 
 	defs 96
 os_stack

@@ -105,6 +105,12 @@ moveFreeToReadyQueue
 	mov pc, lr ; grabbed pcb is now at top of READY_PCB
 
 	movFreeToRdyTail
+		; now we want to update FREE_PTR
+		add r3, r0, #68 
+		ldr r2, [r3] ; get ptr address of the grabbed pcb (the next free pcb)
+		ldr r1, =FREE_PCB
+		str r2, [r1] ; update the FREE_PTR	
+
 		; READY_PCB is not empty, we add this pcb ptr to the end then
 		ldr r1, =READY_PCB_TAIL ;points to the last pcb's ptr
 		ldr r1, [r1] ;we now have the address of the last pcb's ptr
@@ -166,13 +172,15 @@ moveActiveToReadyQueue
 	movActvToRdyTail
 		;the READY_PCB is not empty, add pcb addr to end of the queue
 		ldr r1, =READY_PCB_TAIL ;points to the last pcb's ptr
-		ldr r1, [r1] ; we now have the address of the last pcb's ptr
+		ldr r2, [r1] ; we now have the address of the last pcb's ptr
 
 		; we want to update the ptr ACTIVE_PCB is currently pointing to
 		ldr r0, =ACTIVE_PCB
 		ldr r0, [r0] ; we now have the address of the active pcb's address
 
-		str r0, [r1] ; add the address of the active pcb to the end of READY_PCB
+		str r0, [r2] ; add the address of the active pcb to the end of READY_PCB
+		add r0, r0, #68 ; get the ptr of the active process
+		str r0, [r1] ; update READY_PCB_TAIL
 
 		mov r0, #0
 		ldr r1, =ACTIVE_PCB
