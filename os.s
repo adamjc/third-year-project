@@ -19,11 +19,15 @@ nop
 b	irq_routine				; interrupt request
 b	fiq_routine				; fast interrupt request
 
-; main -------------------------------------------------------------------------
-;
-;-------------------------------------------------------------------------------
 main
 	adrl sp, os_stack
+
+	ldr r9, =TEMP_IRQ
+	mov r8, #0
+	str r8, [r9]
+
+	bl disable_interrupts
+	bl clear_interrupts
 
 	bl initialise_PCB
 
@@ -189,7 +193,7 @@ supervisor_call
 ; ------------------------------------------------------------------------------
 svc_get_time
 	pop {lr}
-	ldr r0, =port_area
+	ldr r0, =PORT_AREA
 	ldr r0, [r0, #TIMER] ; get the timer value
 	movs pc, lr
 
@@ -199,7 +203,7 @@ svc_get_time
 ;	r0: the current value of the timer
 ; ------------------------------------------------------------------------------
 get_time
-	ldr r0, =port_area
+	ldr r0, =PORT_AREA
 	ldr r0, [r0, #TIMER] ; get the timer value
 	mov pc, lr
 
@@ -219,7 +223,7 @@ set_timer_compare
 	pop {lr}
 	add r1, r0, #250 ; find the time 250ms from now
 	and r1, r1, #&ff ; modulo 256 (only 256 states in this counter)
-	ldr r2, =port_area
+	ldr r2, =PORT_AREA
 	str r1, [r2, #TIMER_COMPARE] ; update the timer compare
 	mov pc, lr
 
@@ -227,20 +231,23 @@ set_timer_compare
 ; sets up the (active high) interrupts
 ; ------------------------------------------------------------------------------
 set_interrupts
-	mov r0, #&01
-	ldr r1, =port_area
-	add r1, r1, #IRQ_EN
-	str r0, [r1]
+	mov r0, #&41 ;set upper_button and timer_compare
+	ldr r1, =PORT_AREA
+	str r0, [r1, #IRQ_EN]
 	mov pc, lr
 
 ; disable_interrupts -----------------------------------------------------------
 ; disables interrupts, we use this during 'interrupt_routine' as to allow
-; the current interrupt to finish before being interrupted.
+; the current interrupt to finish before being interrupted. ARM is weird
+; bit 7 set = interrupts off.
 ; ------------------------------------------------------------------------------
 disable_interrupts
+	push {r0}
 	mrs r0, cpsr
 	orr r0, r0, #&80
 	msr cpsr_c, r0
+	pop {r0}
+
 	mov pc, lr
 
 ; enable_interrupts ------------------------------------------------------------
@@ -253,45 +260,83 @@ enable_interrupts
 	msr cpsr_c, r0
 	mov pc, lr
 
-; unknown_svc ------------------------------------------------------------------
+; clear_interrupts -------------------------------------------------------------
 ;
+; ------------------------------------------------------------------------------
+clear_interrupts
+	mov	r0, #&00
+	ldr	r1, =PORT_AREA
+	str	r0, [r1, #INTERRUPT]
+	str r0, [r1, #IRQ_EN]
+
+	mov pc, lr
+
+; unknown_svc ------------------------------------------------------------------
+; user called a supervisor call that doesn't exist
 ; ------------------------------------------------------------------------------
 unknown_svc
 	b reset
 
 ; reset ------------------------------------------------------------------------
-;
+; the routine to reset the OS into a reasonable state
 ; ------------------------------------------------------------------------------
 reset
 	b reset
 
-; prefetch_abort ----------------------------------------------------------------
+; prefetch_abort ---------------------------------------------------------------
 ;
 ; ------------------------------------------------------------------------------
 prefetch_abort
 	b reset
 
-; data_abort --------------------------------------------------------------------
-;
+; data_abort -------------------------------------------------------------------
+; the routine to handle data_aborts (trying to access areas that you shouldn't!)
 ; ------------------------------------------------------------------------------
 data_abort
 	b reset
 
 ; irq_routine ------------------------------------------------------------------
-;
+; the routine to handle interrupts
 ; ------------------------------------------------------------------------------
 irq_routine
-	; TODO
-	bl disable_interrupts
+	adrl sp, irq_stack
+	ldr r8, =TEMP_IRQ
+	ldr r8, [r8]
+	cmp r8, #4
+	beq irq_context_switch
+	push {lr}
+	add r8, r8, #1
+	ldr r9, =TEMP_IRQ
+	str r8, [r9]
+	bl clear_interrupts
+	bl set_timer_compare
+	bl set_interrupts
+	pop {lr}
+	movs pc, lr
+
+	irq_context_switch
+		mov r8, #0
+		ldr r9, =TEMP_IRQ
+		str r8, [r9]
+		push {lr} ; store user mode pc
+		bl disable_interrupts
+		bl clear_interrupts
+
+		; make sure that the registers are what we are expecting them to be
+		; rewrite the context switcher to handle interrupts
+		b svc_context_switch
 
 ; fiq_routine ------------------------------------------------------------------
-;
+; the routine to handle fast interrupts
 ; ------------------------------------------------------------------------------
 fiq_routine
 	b reset	
 
-	defs 96
+	defs 32
 os_stack
+	
+	defs 32
+irq_stack
 
 	defs 96
 proc_1

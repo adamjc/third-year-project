@@ -1,14 +1,3 @@
-; context_switcher -------------------------------------------------------------
-;
-;
-;-------------------------------------------------------------------------------
-
-TEMP_IRQ_LR EQU &9D4
-TEMP_R0 EQU &9D8
-TEMP_R1 EQU &9DC
-TEMP_IRQ_CPSR EQU &9E0
-TEMP_SYSTEM_CPSR EQU &9E4
-
 ; svc_context_switch ----------------------------------------------------------------
 ; Saves the state of the currently running process, including it's registers
 ; r0-12, SP, LR & PC. Then loads up the state of the next process to be run,
@@ -19,6 +8,8 @@ svc_context_switch
 	bl moveActiveToReadyQueue
 	cmp r0, #0
 	blne updateActiveProcess
+	bl set_timer_compare
+	bl set_interrupts
 	bl runActiveProcess
 
 	defs 96

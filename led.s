@@ -5,7 +5,7 @@
 ;	r0: the led to flash (0 - 7)
 ; ------------------------------------------------------------------------------
 led_flash
-	ldr r5, =port_area
+	ldr r5, =PORT_AREA
 	cmp r0, #&80
 	bhi	led_flash_error ; process tried to access led that doesn't exist
 	mov r6, r0
@@ -14,17 +14,15 @@ led_flash
 		mov r0, r6
 		svc SET_LEDS
 
-		mov r0, #&40000
+		mov r0, #&100
 		bl led_delay ; wait for a bit
 
 		; now we want to turn the led off
 		mov r0, r6
 		svc UNSET_LEDS
 
-		mov r0, #&40000
+		mov r0, #&100
 		bl led_delay ; wait for a bit
-
-		svc YIELD
 
 		b led_loop
 
@@ -49,7 +47,7 @@ led_delay
 ;	r0: the current led assignments
 ; ------------------------------------------------------------------------------
 svc_get_leds
-	ldr r0, =port_area
+	ldr r0, =PORT_AREA
 	ldr r0, [r0]
 	pop {lr}
 	movs pc, lr
@@ -60,7 +58,7 @@ svc_get_leds
 ;	r0: the led assignments to set
 ; ------------------------------------------------------------------------------
 svc_set_leds
-	ldr r1, =port_area
+	ldr r1, =PORT_AREA
 	ldr r2, [r1] ; get the led assignments
 	orr r0, r0, r2 ; set the led on, without affecting others
 	strb r0, [r1] ; store it to the port area
@@ -73,7 +71,7 @@ svc_set_leds
 ;	r0: the led(s) to turn off.
 ; ------------------------------------------------------------------------------
 svc_unset_leds
-	ldr r1, =port_area
+	ldr r1, =PORT_AREA
 	ldr r2, [r1] ; get the led assignments
 	and r0, r0, r2
 	eor r0, r0, r2 ; set the led(s) specified, off, leave others on

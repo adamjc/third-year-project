@@ -1,7 +1,8 @@
-FREE_PCB	EQU		&9E8
-ACTIVE_PCB	EQU		&9EC
-READY_PCB	EQU		&9F0
-READY_PCB_TAIL	EQU		&9F4
+FREE_PCB	EQU		&C00
+ACTIVE_PCB	EQU		&C04
+READY_PCB	EQU		&C08
+READY_PCB_TAIL	EQU	&C0C
+TEMP_IRQ	EQU		&C10
 
 ; PCB --------------------------------------------------------------------------
 ; Process Control Block

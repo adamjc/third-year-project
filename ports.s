@@ -1,9 +1,10 @@
 ; ports.s ----------------------------------------------------------------------
 ; List of important port areas on the manchester arm board and their aliases
 ; ------------------------------------------------------------------------------
-port_area		EQU	&10000000 ; the start of the port area
+PORT_AREA		EQU	&10000000 ; the start of the port area
 TIMER			EQU	&08
 TIMER_COMPARE	EQU &0C
+INTERRUPT		EQU	&18
 IRQ_EN			EQU &1C
 
 left_red		EQU	&04 ; left red led
