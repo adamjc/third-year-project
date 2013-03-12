@@ -2,11 +2,7 @@
 ; AdamOS
 ;
 ; TODO
-; implement interrupts
-; implement timer compare
-; make the interrupt call the context switcher
-; add button functionality to ADD an LED process
-; add button functionality to REMOVE an LED process
+; be able to get stack locations for the processes dynamically
 ; implement a physical memory manager (no address space unfortunately)
 
 ; Exception Vectors ------------------------------------------------------------
@@ -252,7 +248,7 @@ set_timer_compare
 ; sets up the (active high) interrupts
 ; ------------------------------------------------------------------------------
 set_interrupts
-	mov r0, #&41 ;set upper_button and timer_compare
+	mov r0, #&01 ; set timer_compare
 	ldr r1, =PORT_AREA
 	str r0, [r1, #IRQ_EN]
 	mov pc, lr
@@ -342,69 +338,7 @@ data_abort
 ; the routine to handle interrupts
 ; ------------------------------------------------------------------------------
 irq_routine
-	adrl sp, irq_stack ; assign the irq's stack
-
-	push {r0} 
-	ldr r0, =PORT_AREA
-	ldr r0, [r0, #INTERRUPT] ; get the interrupt bits
-	bic r0, r0, #&FFFFFF00 ; mask off the interrupt bits
-	and r0, r0, #UPPER_IRQ ; check if upper button was pressed
-	cmp r0, #UPPER_IRQ
-	pop {r0}
-	beq upper_irq_routine
-
-	push {r0}
-	ldr r0, =PORT_AREA
-	ldr r0, [r0, #INTERRUPT] ; get the interrupt bits
-	bic r0, r0, #&FFFFFF00 ; mask off the interrupt bits
-	and r0, r0, #LOWER_IRQ ; check if upper button was pressed
-	cmp r0, #LOWER_IRQ
-	pop {r0}
-	beq lower_irq_routine
-
-	b timer_routine
-
-	; then run the upper_button routine (which is to add a process)
-	upper_irq_routine
-		; if it was, debounce the input (i.e. wait a while!)
-		; have to debounce the interrupt before we move out of here,
-		; make sure upper_button has been left "up"
-		push {r0}
-		mov r0, #&8000
-		u_i_loop ;urgh, so ugly...!			
-			sub r0, r0, #1
-			cmp r0, #0
-			bne u_i_loop
-		pop {r0}
-
-		sub lr, lr, #4 ;debug
-		push {lr}
-		adrl r0, led_flash
-		bl get_top_led
-		adrl r2, proc_5
-		bl addNewProcess
-		movs pc, lr
-
-	; then run the lower_button routine (which is to remove a process)
-	lower_irq_routine
-		; if it was, debounce the input (i.e. wait a while!)
-		; have to debounce the interrupt before we move out of here,
-		; make sure lower_button has been left "up"		
-		push {r0}
-		mov r0, #&8000
-		l_i_loop ;urgh, so ugly...!			
-			sub r0, r0, #1
-			cmp r0, #0
-			bne l_i_loop
-		pop {r0}
-
-		; remove the bottom process
-		push {lr}
-		bl moveReadyToFreeQueue
-		pop {lr}
-
-		sub lr, lr, #4 ;debug
-		movs pc, lr		
+	adrl sp, irq_stack ; assign the irq's stack	
 
 	timer_routine
 		ldr r8, =TEMP_IRQ ; r8 is used to store a counter
@@ -414,6 +348,9 @@ irq_routine
 		beq irq_context_switch ; context_switch out the running process
 
 		push {lr} ; store user mode's pc
+
+		bl check_upper ; check whether the upper button is pressed
+		bl check_lower ; check whether the lower button is pressed
 
 		add r8, r8, #1
 		ldr r9, =TEMP_IRQ
@@ -436,6 +373,89 @@ irq_routine
 			; make sure that the registers are what we are expecting them to be
 			; rewrite the context switcher to handle interrupts
 			b svc_context_switch
+
+; check_upper ------------------------------------------------------------------
+; checks whether the upper button has been pressed and seen to
+; ------------------------------------------------------------------------------
+check_upper
+	push {r0-r2}
+	ldr r0, =BUTTONS
+	ldr r0, [r0]
+	bic r0, r0, #&FFFFFF00
+	and r0, r0, #&40
+	cmp r0, #&40
+	beq upper_seen_to ; the upper button is held down, see to it
+
+	; the upper button must not be held down
+	ldr r0, =UPPER_SEEN_TO
+	mov r1, #0 ; the upper button has no longer been seen to
+	str r1, [r0] 
+
+	pop {r0-r2}
+	mov pc, lr
+
+	upper_seen_to ; check whether we have currently seen to the button
+		ldr r0, =UPPER_SEEN_TO
+		ldr r0, [r0]
+		cmp r0, #1 ; has it been seen to?
+		popeq {r0-r2}
+		moveq pc, lr
+
+		; if it has not been seen to, then add a process
+		adrl r0, led_flash
+		push {lr}
+		bl get_top_led
+		adrl r2, proc_5 ;TODO
+		bl addNewProcess
+
+		ldr r0, =UPPER_SEEN_TO 
+		mov r1, #1 ; the request has now been seen to
+		str r1, [r0]
+
+		pop {lr}
+		pop {r0-r2}
+
+		mov pc, lr ; done done
+
+; check_lower ------------------------------------------------------------------
+; checks whether the lower button has been pressed and seen to 
+; ------------------------------------------------------------------------------
+check_lower
+	push {r0-r2}
+	ldr r0, =BUTTONS
+	ldr r0, [r0]
+	bic r0, r0, #&FFFFFF00
+	and r0, r0, #&80
+	cmp r0, #&80
+	beq lower_seen_to ; the lower button is held down, see to it
+
+	; the lower button must not be held down
+	ldr r0, =LOWER_SEEN_TO
+	mov r1, #0
+	str r1, [r0]
+
+	pop {r0-r2}
+	mov pc, lr
+
+	lower_seen_to
+		ldr r0, =LOWER_SEEN_TO
+		ldr r0, [r0]
+		cmp r0, #1 ; has it been seen to?
+		popeq {r0-r2}
+		moveq pc, lr
+
+		; if it has not been seen to, then remove a process
+		push {lr}
+		bl moveReadyToFreeQueue
+		pop {lr}
+
+		ldr r0, =LOWER_SEEN_TO
+		mov r1, #1
+		str r1, [r0]
+
+		pop {r0-r2}
+		mov pc, lr
+
 
 ; fiq_routine ------------------------------------------------------------------
 ; the routine to handle fast interrupts

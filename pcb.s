@@ -5,6 +5,8 @@ READY_PCB_TAIL	EQU		&D0C
 TEMP_IRQ		EQU		&D10
 LED_GET			EQU		&D14
 FREE_PCB_TAIL	EQU		&D18
+UPPER_SEEN_TO	EQU		&D1C
+LOWER_SEEN_TO	EQU		&D20
 
 ; PCB --------------------------------------------------------------------------
 ; Process Control Block

@@ -9,6 +9,8 @@ IRQ_EN			EQU &1C
 UPPER_IRQ		EQU	&40
 LOWER_IRQ		EQU &80
 
+BUTTONS			EQU &10000018
+
 left_red		EQU	&04 ; left red led
 right_red		EQU &40 ; right red led
 left_amber		EQU &02 ; left amber led
