@@ -29,25 +29,47 @@ main
 	bl disable_interrupts
 	bl clear_interrupts
 
+	; add leds to the array
+	ldr r0, =LED_GET
+	ldr r1, =led_get_space
+	str r1, [r0]
+
+	mov r0, #left_red
+	str r0, [r1], #4
+	mov r0, #right_red
+	str r0, [r1], #4
+	mov r0, #left_amber
+	str r0, [r1], #4
+	mov r0, #right_amber
+	str r0, [r1], #4
+	mov r0, #left_green
+	str r0, [r1], #4
+	mov r0, #right_green
+	str r0, [r1], #4
+	mov r0, #left_blue
+	str r0, [r1], #4
+	mov r0, #right_blue
+	str r0, [r1], #4
+
 	bl initialise_PCB
 
 	adrl r0, led_flash
-	mov r1, #left_red
+	bl get_top_led
 	adrl r2, proc_1
 	bl addNewProcess
 
 	adrl r0, led_flash
-	mov r1, #right_red
+	bl get_top_led
 	adrl r2, proc_2
 	bl addNewProcess
 
 	adrl r0, led_flash
-	mov r1, #left_blue
+	bl get_top_led
 	adrl r2, proc_3
 	bl addNewProcess
 
 	adrl r0, led_flash
-	mov r1, #right_amber
+	bl get_top_led
 	adrl r2, proc_4
 	bl addNewProcess
 
@@ -79,19 +101,17 @@ runActiveProcess
 	ldr r1, [r14, #64] 
 	msr spsr, r1 ; put pcb cpsr into spsr
 
-	; move r0-r12 from the pcb into our registers
-	ldmia r14!, {r0-r12}
+	ldmia r14!, {r0-r12} ; move r0-r12 from the pcb into our registers
 
-	; update the SP
-	ldmia r14!, {r13}^
+	ldmia r14!, {r13}^ 	; update the SP
 
-	; update the LR
-	ldmia r14!, {r14}^
+	ldmia r14!, {r14}^ ; update the LR
 
 	; then we want to 'return' to user mode
 	ldr r14, =ACTIVE_PCB
 	ldr r14, [r14]
 	ldr r14, [r14, #60] ; load process's pc into r14
+	sub lr, lr, #4
 	movs pc, r14 ; return to user mode.
 
 ; storeActiveProcess -----------------------------------------------------------
@@ -195,6 +215,7 @@ svc_get_time
 	pop {lr}
 	ldr r0, =PORT_AREA
 	ldr r0, [r0, #TIMER] ; get the timer value
+	sub lr, lr, #4
 	movs pc, lr
 
 ; get_time ---------------------------------------------------------------------
@@ -271,6 +292,28 @@ clear_interrupts
 
 	mov pc, lr
 
+; get_top_led ------------------------------------------------------------------
+;
+; ------------------------------------------------------------------------------
+get_top_led
+	push {r0}
+	ldr r0, =LED_GET
+	ldr r1, [r0]
+	ldr r1, [r1]
+	ldr r2, =LED_GET
+	ldr r2, [r2]
+	add r2, r2, #4
+	str r2, [r0]
+	pop {r0}
+
+	mov pc, lr
+
+; add_led_list -----------------------------------------------------------------
+;
+; ------------------------------------------------------------------------------
+add_led_list
+
+
 ; unknown_svc ------------------------------------------------------------------
 ; user called a supervisor call that doesn't exist
 ; ------------------------------------------------------------------------------
@@ -299,32 +342,100 @@ data_abort
 ; the routine to handle interrupts
 ; ------------------------------------------------------------------------------
 irq_routine
-	adrl sp, irq_stack
-	ldr r8, =TEMP_IRQ
-	ldr r8, [r8]
-	cmp r8, #4
-	beq irq_context_switch
-	push {lr}
-	add r8, r8, #1
-	ldr r9, =TEMP_IRQ
-	str r8, [r9]
-	bl clear_interrupts
-	bl set_timer_compare
-	bl set_interrupts
-	pop {lr}
-	movs pc, lr
+	adrl sp, irq_stack ; assign the irq's stack
 
-	irq_context_switch
-		mov r8, #0
+	push {r0} 
+	ldr r0, =PORT_AREA
+	ldr r0, [r0, #INTERRUPT] ; get the interrupt bits
+	bic r0, r0, #&FFFFFF00 ; mask off the interrupt bits
+	and r0, r0, #UPPER_IRQ ; check if upper button was pressed
+	cmp r0, #UPPER_IRQ
+	pop {r0}
+	beq upper_irq_routine
+
+	push {r0}
+	ldr r0, =PORT_AREA
+	ldr r0, [r0, #INTERRUPT] ; get the interrupt bits
+	bic r0, r0, #&FFFFFF00 ; mask off the interrupt bits
+	and r0, r0, #LOWER_IRQ ; check if upper button was pressed
+	cmp r0, #LOWER_IRQ
+	pop {r0}
+	beq lower_irq_routine
+
+	b timer_routine
+
+	; then run the upper_button routine (which is to add a process)
+	upper_irq_routine
+		; if it was, debounce the input (i.e. wait a while!)
+		; have to debounce the interrupt before we move out of here,
+		; make sure upper_button has been left "up"
+		push {r0}
+		mov r0, #&8000
+		u_i_loop ;urgh, so ugly...!			
+			sub r0, r0, #1
+			cmp r0, #0
+			bne u_i_loop
+		pop {r0}
+
+		sub lr, lr, #4 ;debug
+		push {lr}
+		adrl r0, led_flash
+		bl get_top_led
+		adrl r2, proc_5
+		bl addNewProcess
+		movs pc, lr
+
+	; then run the lower_button routine (which is to remove a process)
+	lower_irq_routine
+		; if it was, debounce the input (i.e. wait a while!)
+		; have to debounce the interrupt before we move out of here,
+		; make sure lower_button has been left "up"		
+		push {r0}
+		mov r0, #&8000
+		l_i_loop ;urgh, so ugly...!			
+			sub r0, r0, #1
+			cmp r0, #0
+			bne l_i_loop
+		pop {r0}
+
+		; remove the bottom process
+		push {lr}
+		bl moveReadyToFreeQueue
+		pop {lr}
+
+		sub lr, lr, #4 ;debug
+		movs pc, lr		
+
+	timer_routine
+		ldr r8, =TEMP_IRQ ; r8 is used to store a counter
+		ldr r8, [r8] ; r8 is used to store a counter
+		cmp r8, #4 ; if the counter is #4 (i.e. 4*250ms or 1s has passed)
+
+		beq irq_context_switch ; context_switch out the running process
+
+		push {lr} ; store user mode's pc
+
+		add r8, r8, #1
 		ldr r9, =TEMP_IRQ
 		str r8, [r9]
-		push {lr} ; store user mode pc
-		bl disable_interrupts
 		bl clear_interrupts
+		bl set_timer_compare
+		bl set_interrupts
+		pop {lr}
+		sub lr, lr, #4 ;debug
+		movs pc, lr
 
-		; make sure that the registers are what we are expecting them to be
-		; rewrite the context switcher to handle interrupts
-		b svc_context_switch
+		irq_context_switch
+			mov r8, #0
+			ldr r9, =TEMP_IRQ
+			str r8, [r9]
+			push {lr} ; store user mode pc
+			bl disable_interrupts
+			bl clear_interrupts
+
+			; make sure that the registers are what we are expecting them to be
+			; rewrite the context switcher to handle interrupts
+			b svc_context_switch
 
 ; fiq_routine ------------------------------------------------------------------
 ; the routine to handle fast interrupts
@@ -359,3 +470,6 @@ include context_switcher.s
 include pcb.s
 include led.s
 include ports.s
+
+led_get_space
+	defs 80

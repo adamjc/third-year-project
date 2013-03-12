@@ -1,8 +1,10 @@
-FREE_PCB	EQU		&C00
-ACTIVE_PCB	EQU		&C04
-READY_PCB	EQU		&C08
-READY_PCB_TAIL	EQU	&C0C
-TEMP_IRQ	EQU		&C10
+FREE_PCB		EQU		&D00
+ACTIVE_PCB		EQU		&D04
+READY_PCB		EQU		&D08
+READY_PCB_TAIL	EQU		&D0C
+TEMP_IRQ		EQU		&D10
+LED_GET			EQU		&D14
+FREE_PCB_TAIL	EQU		&D18
 
 ; PCB --------------------------------------------------------------------------
 ; Process Control Block
@@ -50,6 +52,8 @@ initialise_PCB
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
 	add r1, r0, #4 ;create the ptr address
+	ldr r2, =FREE_PCB_TAIL
+	str r0, [r2]	
 	str r1, [r0] ;store the ptr address in the ptr section of the pcb
 
 	add r0, r0, #72 ;move to the ptr section of the next pcb
@@ -152,6 +156,45 @@ updateActiveProcess
 
 	mov pc, lr ; the top pcb in READY_PCB is now in ACTIVE_PCB	
 
+; moveReadyToFreeQueue ---------------------------------------------------------
+; moves the bottom pcb from the ready queue to the free queue (i.e. removes it)
+; ------------------------------------------------------------------------------
+moveReadyToFreeQueue
+	; get the bottom pcb in the READY_PCB queue
+	push {r0-r3}
+	ldr r0, =READY_PCB_TAIL
+	ldr r1, [r0] 
+	ldr r1, [r1] ; got the bottom pcb address
+
+	; need to update READY_PCB_TAIL to be the new bottom process
+	ldr r2, =READY_PCB
+	ldr r2, [r2]
+	find_bottom		
+		cmp r2, r1 ; is this the bottom process?
+		beq found_bottom
+		mov r3, r2 ; move the "parent"
+		add r2, r2, #68 ; get the ptr to the next PCB
+		ldr r2, [r2]
+		b find_bottom
+
+	found_bottom
+		; r3 contains the new READY_PCB_TAIL
+		ldr r0, =READY_PCB_TAIL
+		str r3, [r0] ; r3 is now the bottom of the PCB
+
+	; now we need to move the pcb in r1 (the old tail) to the free queue
+	ldr r0, =FREE_PCB_TAIL 
+	ldr r0, [r0] ; get the bottom pcb
+	add r0, r0, #68 ; get the ptr address
+	str r1, [r0] ; store the old tail to the free queue (add it to the end)
+
+	; now we need to update the FREE_PCB_TAIL
+	ldr r0, =FREE_PCB_TAIL
+	str r1, [r0]
+
+	pop {r0-r3}
+	mov pc, lr
+
 ; moveActiveToReadyQueue -------------------------------------------------------
 ; moves the pcb from the active queue to the ready queue
 ; input
@@ -191,11 +234,11 @@ moveActiveToReadyQueue
 		mov pc, lr ; process that was active is now at end of READY_PCB
 
 pcb_start
-	defs 76
-	defs 76
-	defs 76
-	defs 76
-	defs 76
-	defs 76
-	defs 76
-	defs 76
+	defs 72
+	defs 72
+	defs 72
+	defs 72
+	defs 72
+	defs 72
+	defs 72
+	defs 72

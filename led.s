@@ -14,14 +14,14 @@ led_flash
 		mov r0, r6
 		svc SET_LEDS
 
-		mov r0, #&100
+		mov r0, #&900
 		bl led_delay ; wait for a bit
 
 		; now we want to turn the led off
 		mov r0, r6
 		svc UNSET_LEDS
 
-		mov r0, #&100
+		mov r0, #&900
 		bl led_delay ; wait for a bit
 
 		b led_loop

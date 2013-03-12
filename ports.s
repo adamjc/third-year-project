@@ -6,6 +6,8 @@ TIMER			EQU	&08
 TIMER_COMPARE	EQU &0C
 INTERRUPT		EQU	&18
 IRQ_EN			EQU &1C
+UPPER_IRQ		EQU	&40
+LOWER_IRQ		EQU &80
 
 left_red		EQU	&04 ; left red led
 right_red		EQU &40 ; right red led
