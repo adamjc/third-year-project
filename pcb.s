@@ -1,12 +1,13 @@
 FREE_PCB		EQU		&D00
 ACTIVE_PCB		EQU		&D04
 READY_PCB		EQU		&D08
-READY_PCB_TAIL	EQU		&D0C
+READY_PCB_TAIL	EQU		&D0C ; this stores the last pcb's address
 TEMP_IRQ		EQU		&D10
 LED_GET			EQU		&D14
 FREE_PCB_TAIL	EQU		&D18
 UPPER_SEEN_TO	EQU		&D1C
 LOWER_SEEN_TO	EQU		&D20
+PROC_STACK_CTR	EQU		&D24
 
 ; PCB --------------------------------------------------------------------------
 ; Process Control Block
@@ -166,11 +167,12 @@ moveReadyToFreeQueue
 	push {r0-r3}
 	ldr r0, =READY_PCB_TAIL
 	ldr r1, [r0] 
-	ldr r1, [r1] ; got the bottom pcb address
+	ldr r1, [r1]
 
-	; need to update READY_PCB_TAIL to be the new bottom process
+	; need to update the pcb above this to be the new bottom process
 	ldr r2, =READY_PCB
 	ldr r2, [r2]
+	mov r3, #0
 	find_bottom		
 		cmp r2, r1 ; is this the bottom process?
 		beq found_bottom
@@ -181,6 +183,9 @@ moveReadyToFreeQueue
 
 	found_bottom
 		; r3 contains the new READY_PCB_TAIL
+		cmp r3, #0 ; i.e. this was the only process in the queue?
+		ldreq r0, =READY_PCB
+		streq r3, [r0]
 		ldr r0, =READY_PCB_TAIL
 		str r3, [r0] ; r3 is now the bottom of the PCB
 
@@ -219,6 +224,7 @@ moveActiveToReadyQueue
 		;the READY_PCB is not empty, add pcb addr to end of the queue
 		ldr r1, =READY_PCB_TAIL ;points to the last pcb's ptr
 		ldr r2, [r1] ; we now have the address of the last pcb's ptr
+		ldr r2, [r1]
 
 		; we want to update the ptr ACTIVE_PCB is currently pointing to
 		ldr r0, =ACTIVE_PCB

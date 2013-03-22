@@ -3,7 +3,9 @@
 ;
 ; TODO
 ; be able to get stack locations for the processes dynamically
+; BACK BURNER
 ; implement a physical memory manager (no address space unfortunately)
+; refactor code, move all the irq stuff to irq.s
 
 ; Exception Vectors ------------------------------------------------------------
 b	main					; reset
@@ -51,22 +53,7 @@ main
 
 	adrl r0, led_flash
 	bl get_top_led
-	adrl r2, proc_1
-	bl addNewProcess
-
-	adrl r0, led_flash
-	bl get_top_led
-	adrl r2, proc_2
-	bl addNewProcess
-
-	adrl r0, led_flash
-	bl get_top_led
-	adrl r2, proc_3
-	bl addNewProcess
-
-	adrl r0, led_flash
-	bl get_top_led
-	adrl r2, proc_4
+	bl get_proc_stack
 	bl addNewProcess
 
 	bl enable_interrupts
@@ -334,6 +321,31 @@ prefetch_abort
 data_abort
 	b reset
 
+; initialise_proc_stack --------------------------------------------------------
+;
+; ------------------------------------------------------------------------------
+initialise_proc_stack	
+	push {r0, r1}
+	ldr r0, =PROC_STACK_CTR
+	adrl r1, proc_stack_start
+	str r1, [r0]
+	pop {r0, r1}
+	mov pc, lr
+
+
+; get_proc_stack ---------------------------------------------------------------
+;
+; ------------------------------------------------------------------------------
+get_proc_stack
+	push {r0, r1}
+	ldr r1, =PROC_STACK_CTR
+	ldr r0, [r1]
+	add r0, r0, #96
+	str r0, [r1]
+	mov r2, r0
+	pop {r0, r1}
+	mov pc, lr
+
 ; irq_routine ------------------------------------------------------------------
 ; the routine to handle interrupts
 ; ------------------------------------------------------------------------------
@@ -405,7 +417,7 @@ check_upper
 		adrl r0, led_flash
 		push {lr}
 		bl get_top_led
-		adrl r2, proc_5 ;TODO
+		bl get_proc_stack
 		bl addNewProcess
 
 		ldr r0, =UPPER_SEEN_TO 
@@ -469,6 +481,7 @@ os_stack
 	defs 32
 irq_stack
 
+proc_stack_start
 	defs 96
 proc_1
 	defs 96
